@@ -1,0 +1,2 @@
+id,cluster_name,cluster_nodes,is_ssl_enabled,is_security_enabled,user_name,password,created_by
+100,es_samples,localhost,FALSE,FALSE,,,admin

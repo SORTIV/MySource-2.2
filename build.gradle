@@ -1,0 +1,283 @@
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'com.esri.arcgisruntime.java'
+apply plugin: 'eclipse'
+buildscript {
+	ext { springBootVersion = '1.5.6.RELEASE' }
+	repositories {
+		mavenLocal()
+		maven { url "https://plugins.gradle.org/m2/" }
+		maven { url 'https://esri.bintray.com/arcgis' }
+
+		maven {
+			credentials {
+				username "$artifactoryUser"
+				password "$artifactoryPassword"
+			}
+			url "$artifactoryPullUrl"
+		}
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath("io.spring.gradle:dependency-management-plugin:1.0.3.RELEASE")
+		classpath 'com.esri.arcgisruntime:gradle-arcgis-java-plugin:1.0.0'
+	}
+}
+
+allprojects {
+	group = 'com.apporchid'
+	apply plugin: 'eclipse'
+
+	
+	configurations.all {
+		resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+		//resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+
+		exclude group: "log4j"
+		exclude group: 'org.slf4j', module: 'slf4j-log4j12'
+		exclude group: 'org.hibernate', module: 'hibernate-core:5.0.12.Final'
+		resolutionStrategy {
+			force "net.minidev:json-smart:2.1.1"
+			force "com.google.guava:guava:20.0"
+		}
+		exclude group: 'com.google.guava', module: 'guava:22.0'
+	}
+
+	repositories { mavenLocal() }
+}
+
+
+arcgis.version = '100.1.0'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+	maven {
+		credentials {
+			username "$artifactoryUser"
+			password "$artifactoryPassword"
+		}
+		url "$artifactoryPullUrl"
+	}
+
+}
+
+
+bootRepackage { mainClass = 'com.apporchid.template.AOPlatformTemplateApplication' }
+
+def Properties props = new Properties()
+def deployPropFile = file('deploy.properties')
+def projectName;
+def aoCompositeServerPath;
+
+if (deployPropFile.canRead()){
+	props.load(new FileInputStream(deployPropFile))
+
+	if (props!=null){
+		if (props.containsKey('cloudseer.module.name')) {
+			projectName = props['cloudseer.module.name']
+			logger.info('cloudseer.module.name found ${cloudseer.module.name}')
+		}else{
+			logger.error("cloudseer.module.name property not found")
+		}
+
+		if (props.containsKey('ao.composite.server.path')) {
+			aoCompositeServerPath = props['ao.composite.server.path']
+			logger.info('ao.composite.server.path found ${ao.composite.server.path}')
+		}else{
+			println("ao.composite.server.path property not found")
+		}
+	}
+}
+
+dependencies {
+
+	compile("com.apporchid:ao-common:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:ao-core:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:ao-jpa:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:ao-license:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:ao-schedulers:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:ao-security:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:cloudseer-common:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:cloudseer:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:ao-config-builder:${artifactVersion}"){ changing = true}
+	compile group: "com.apporchid", name: "cloudseer-pipeline", version: "${artifactVersion}", changing: true
+
+	compile("com.apporchid:cloudseer-transformer:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:cloudseer-datasource:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:agora-analytics:${artifactVersion}"){ changing = true}
+	compile("com.apporchid:ao-elasticsearch:${artifactVersion}"){ changing = true}
+	
+
+	compile "org.elasticsearch:elasticsearch:${elastic_search_version}"
+	compile "org.elasticsearch.client:elasticsearch-rest-high-level-client:${elastic_search_version}"
+	compile "org.elasticsearch.client:elasticsearch-rest-client:${elastic_search_version}"
+	compile group: 'org.ehcache', name: 'ehcache', version: '3.1.3'
+
+	compile('org.springframework.boot:spring-boot-starter-aop')
+	compile("org.springframework.boot:spring-boot-starter-web") {
+		exclude module: "spring-boot-starter-logging"
+		exclude group: 'org.slf4j'
+		exclude group: 'ch.qos.logback'
+	}
+	compile("org.springframework.boot:spring-boot-starter-actuator"){
+		exclude group: 'org.slf4j'
+		exclude group: 'ch.qos.logback'
+	}
+	compile('org.springframework.boot:spring-boot-starter:1.5.6.RELEASE')
+
+	testCompile "org.testng:testng:6.8.13"
+	testCompile "org.springframework.boot:spring-boot-starter-test"
+	testCompile group: 'org.springframework', name: 'spring-test', version: '4.3.11.RELEASE'
+	testCompile group: 'org.hamcrest', name: 'hamcrest-junit', version: '2.0.0.0'
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+
+	classifier = 'sources'
+	from sourceSets.main.allJava
+	doLast {
+		logger.quiet("${rootProject.name}-sources.jar file created in $project.buildDir/libs")
+	}
+}
+
+task cleanResources(type: Delete) { delete 'build/resources' }
+
+clean {
+	delete "package-lock.json"
+	delete "target"
+}
+
+task stage(dependsOn: 'bootRepackage') {
+}
+
+test {
+	useTestNG() { includeGroups 'solutionMain' }
+}
+
+task runTest(type: Test, dependsOn: 'test') {
+	doFirst { logger.quiet("Deployed Solution Json to AO Composite Server through test case") }
+}
+
+jar{
+	exclude('com/apporchid/solution/custom/config/**')
+
+	doLast {
+		logger.quiet("${rootProject.name}.jar file created in $project.buildDir/libs")
+	}
+}
+
+
+task deployCSModuleJar(type: Copy, dependsOn: ['jar', 'sourcesJar']) {
+	def aoCompositeServerOutputPath = file("${aoCompositeServerPath}/src/main/webapp/libs")
+	def projectLibPath = file("$project.buildDir/libs/")
+
+	from (projectLibPath){ include '*.jar'}
+	into aoCompositeServerOutputPath
+	doLast {
+		logger.quiet( "${rootProject.name}.jar and ${rootProject.name}-sources.jar from "+projectLibPath+" are copied to "+aoCompositeServerOutputPath)
+	}
+}
+
+
+task copyCSModuleResources(type: Copy, dependsOn: 'jar') {
+	from 'resources'
+	into 'build/dist/resources'
+}
+
+task copyCSModuleLiquibase(type: Copy, dependsOn: 'jar') {
+
+	from 'liquibase'
+	into 'build/dist/liquibase'
+}
+
+task copyCSModuleLib(type: Copy, dependsOn: 'jar') {
+	from ('libs'){ include '**/*.jar' }
+	from 'libraries'
+	into 'build/dist/libs'
+}
+
+
+task packageCSModuleArtifacts(type: Copy, dependsOn: 'jar') {
+	from ('build/libs'){ include '**/*.jar' }
+	from 'libraries'
+	
+	into 'build/dist/libs'
+	
+	dependsOn('copyCSModuleLib')
+	dependsOn('copyCSModuleResources')
+	dependsOn('copyCSModuleLiquibase')
+}
+
+
+task copyDeploymentArtifacts(type: Copy, dependsOn: 'packageCSModuleArtifacts') {
+
+	from "deploy.bat", "deploy.sh", "deploy.properties"
+	into 'build/dist'
+}
+
+task buildCSModuleArchive(type: Zip, dependsOn: 'clean' ) {
+	dependsOn 'copyDeploymentArtifacts'
+	
+	baseName "$projectName"
+	includeEmptyDirs=true
+	extension "$deployArchiveExt"
+	from 'build/dist/'
+	exclude '**/node_modules/**'
+	destinationDir(file('dist/'))
+	zip64 true
+	doLast {
+		  logger.quiet("Project archive ${projectName}.zip created and copied to ${rootProject.name}/dist folder.")
+	   }
+}
+
+task cleanDeployedCSModuleJar(type: Delete) {
+	
+	def aoCompositeServerSolutionJarPath = file("${aoCompositeServerPath}/src/main/webapp/libs/"+"${rootProject.name}"+".jar")
+	delete aoCompositeServerSolutionJarPath
+	
+	def aoCompositeServerSolutionSourcesJarPath = file("${aoCompositeServerPath}/src/main/webapp/libs/"+"${rootProject.name}"+"-sources.jar")
+	delete aoCompositeServerSolutionSourcesJarPath
+   
+	
+	def sourceJarPath = file("$project.buildDir/libs/")
+	delete sourceJarPath
+   
+	doLast {
+		 logger.quiet( "Deleted ${rootProject.name}.jar file from ${aoCompositeServerPath}/src/main/webapp/libs/")
+		  logger.quiet( "Deleted ${rootProject.name}-sources.jar file from "+sourceJarPath)
+	}
+}
+
+
+task deployCSModule(type: Copy, dependsOn:runTest){
+
+}
+
+task buildAndCopyCSModuleJar(type: Copy, dependsOn: ['deployCSModuleJar']) {
+}
+
+task cleanCSModule(type: Delete, dependsOn: ['cleanDeployedCSModuleJar']) {
+}
+
+configure(buildAndCopyCSModuleJar){
+	group = 'cloudseer'
+	description = 'Build and Copy CS project Jar to cloudseer Server [**Requires server restart]'
+}
+
+configure(buildCSModuleArchive){
+	group = 'cloudseer'
+	description = 'Build cloudseer module archive'
+}
+
+configure(deployCSModule){
+	group = 'cloudseer'
+	description = 'Deploy pipelines to AO Cloudseer Server through test case'
+}
+
+configure(cleanCSModule){
+	group = 'cloudseer'
+	description = 'Clean Jars in cloudseer Server [**Requires server restart]'
+}
+

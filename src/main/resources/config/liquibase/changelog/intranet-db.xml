@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd
+                        http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+
+	<changeSet id="intranet-0000000000002" author="apparao">
+		<update tableName="configuration_property" schemaName="common">
+			<column name="value"
+				valueComputed="(select CONCAT(value, ',com.amwater') from common.configuration_property where name='scan.packages')" />
+			<where>name='scan.packages'</where>
+		</update>
+	</changeSet>
+
+<changeSet id="elasticsearch-enabling-intranet-1" author="veena">
+		<update tableName="configuration_property" schemaName="common">
+			<column name="value">true</column>
+			<where>name='elasticsearch.isEnabled'</where>
+		</update>		
+	</changeSet>
+	
+	<changeSet id="ao-db-config-groups-intranet-1" author="hari">
+
+		<insert tableName="configuration_group" schemaName="common">
+			<!-- <column name="tenant_id">1</column> -->
+			<column name="group_name">INTRANET</column>
+			<column name="group_desc">INTRANET CONFIGURATION</column>
+			<column name="parent_group_id"></column>
+			<column name="created_by">system</column>
+			<column name="last_modified_by">system</column>
+		</insert>
+	</changeSet>
+	
+		<changeSet id="ao-db-config-prop-intranet-1" author="hari">
+	<insert tableName="configuration_property" schemaName="common">
+			<!-- <column name="tenant_id">1</column> -->
+			<column name="name">intranet.index-name</column>
+			<column name="value">intranet</column>
+			<column name="type">STRING</column>
+			<column name="group_id"
+				valueComputed="(SELECT id FROM common.configuration_group WHERE group_name = 'INTRANET')"></column>
+			<column name="created_by">system</column>
+			<column name="last_modified_by">system</column>
+		</insert>
+	</changeSet>
+	<changeSet id="ao-db-config-prop-intranet-2" author="hari">
+	<insert tableName="configuration_property" schemaName="common">
+			<!-- <column name="tenant_id">1</column> -->
+			<column name="name">intranet.type-name</column>
+			<column name="value">article</column>
+			<column name="type">STRING</column>
+			<column name="group_id"
+				valueComputed="(SELECT id FROM common.configuration_group WHERE group_name = 'INTRANET')"></column>
+			<column name="created_by">system</column>
+			<column name="last_modified_by">system</column>
+		</insert>
+	</changeSet>
+	<changeSet id="ao-db-config-prop-intranet-2" author="hari">
+	<insert tableName="configuration_property" schemaName="common">
+			<!-- <column name="tenant_id">1</column> -->
+			<column name="name">user.type-name</column>
+			<column name="value">user</column>
+			<column name="type">STRING</column>
+			<column name="group_id"
+				valueComputed="(SELECT id FROM common.configuration_group WHERE group_name = 'INTRANET')"></column>
+			<column name="created_by">system</column>
+			<column name="last_modified_by">system</column>
+		</insert>
+	</changeSet>
+     <!-- <changeSet id="samples-db-0000000000001" author="none" dbms="postgresql,oracle,h2">
+		<loadData encoding="UTF-8"
+			file="classpath:config/liquibase/samples_datasources.csv"
+			separator="," quotchar='"' tableName="db_datasource" schemaName="common" >
+			<column header="datasource_name" name="datasource_name" type="string"/>
+			<column header="db_type" name="db_type" type="numeric"/>
+			<column header="user_name" name="user_name" type="string"/>
+			<column header="password" name="password" type="string"/>
+			<column header="init_size" name="init_size" type="numeric"/>	
+			<column header="max_size" name="max_size" type="numeric"/>
+			<column header="max_idle" name="max_idle" type="numeric"/>
+			<column header="pool_provider_type" name="pool_provider_type" type="string"/>
+			<column header="max_waittime" name="max_waittime" type="numeric"/>
+			<column header="created_by" name="created_by" type="string"/>
+			<column header="addl_properties" name="addl_properties" type="skip"/>
+			<column header="created_date" name="created_date" type="string"/>
+			<column header="last_modified_by" name="last_modified_by" type="skip"/>
+			<column header="last_modified_date" name="last_modified_date" type="skip"/>		
+		</loadData>
+	</changeSet>	 -->
+	
+		
+	<!-- Please uncomment if your solution package is not com.apporchid which is mostly the case and
+		replace <include solution package> with your main package, for ex: com.abc
+	<changeSet id="samples-db-0000000000002" author="none" runOnChange="true">
+		<update tableName="configuration_property" schemaName="common">
+			<column name="value">com.apporchid,<include solution package></column>
+			<where>name='scan.packages'</where>
+		</update>		
+	</changeSet>
+	 -->
+	 <!-- Please uncomment if you need to enable usage events for your solution
+	<changeSet id="samples-db-0000000000004" author="none" runOnChange="true">
+		<update tableName="configuration_property" schemaName="common">
+			<column name="value">true</column>
+			<where>name='usage-analytics.enable'</where>
+		</update>		
+	</changeSet>
+	-->
+	<!-- Please uncomment if you need to enable usage events for your solution
+	<changeSet id="samples-db-0000000000004" author="none" runOnChange="true">
+		<update tableName="configuration_property" schemaName="common">
+			<column name="value">true</column>
+			<where>name='elasticsearch.isEnabled'</where>
+		</update>		
+	</changeSet>
+	-->
+	<!-- <changeSet id="samples-db-0000000000005" author="system" dbms="postgresql,oracle,h2">
+        <customChange class="com.apporchid.changeset.CustomImplDBChangeset" >
+            <param name="datasourcename" value="sampleImplDB" />
+            <param name="file" value="config/liquibase/changelog/samples-data.xml" />
+        </customChange>
+    </changeSet> -->
+	
+</databaseChangeLog>

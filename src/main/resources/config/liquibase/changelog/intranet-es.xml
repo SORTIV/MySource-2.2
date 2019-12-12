@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+	xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd
+                        http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+
+      <changeSet id="samples-es-1" author="none" dbms="postgresql,oracle,h2">
+		<loadData encoding="UTF-8"
+			file="classpath:config/liquibase/intranet_esconfig.csv"
+			separator="," quotchar='"' tableName="es_config" schemaName="cloudseer" >
+			<column header="id" name="id" type="numeric"/>
+			<column header="cluster_name" name="cluster_name" type="string"/>
+			<column header="cluster_nodes" name="cluster_nodes" type="string"/>
+			<column header="is_ssl_enabled" name="is_ssl_enabled" type="boolean"/>
+			<column header="is_security_enabled" name="is_security_enabled" type="boolean"/>
+			<column header="user_name" name="username" type="string"/>	
+			<column header="password" name="password" type="string"/>
+			<column header="created_by" name="created_by" type="string"/>
+			<column header="addl_properties" name="addl_properties" type="skip"/>
+			<column header="created_date" name="created_date" type="string"/>
+			<column header="last_modified_by" name="last_modified_by" type="skip"/>
+			<column header="last_modified_date" name="last_modified_date" type="skip"/>		
+		</loadData>
+	</changeSet>	
+	
+	
+</databaseChangeLog>
